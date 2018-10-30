@@ -6,10 +6,10 @@ sys.getdefaultencoding() devuelve default encoding para python ASCII,
 pero el FS en linux es utf8 -> se descajetan los nombres de archivo
 agregar esto, o manejar senales:
 try:
-  while True:
-    print 1
+    while True:
+      print 1
 except KeyboardInterrupt:
-  print "test"
+    print "test"
 ,tener en cuenta terminar tesseract y convert si estan a mitad de camino
 """
 import os
@@ -20,15 +20,17 @@ from mysql.connector import errorcode
 #import subprocess
 from subprocess import PIPE,Popen
 
+procesarPDF = 1
+
 def conectarMySQL():
     # Si jode insert sql grandote cambiar max_allowed_packet en my.cnf
     # o ...
     # /opt/lampp/bin/mysql -uroot -p  --max_allowed_packet=1073741824 < insert.sql
     try:
-        cnx = mysql.connector.connect(user='<usuario>',
-                                      password='<contraseña>',
+        cnx = mysql.connector.connect(user='navicat',
+                                      password='L4Cl4v3P0l3nt4',
                                       host='localhost',
-                                      database='<DB>',
+                                      database='intranet',
                                       charset='utf8',
                                       use_unicode=False)
 
@@ -66,9 +68,13 @@ def find_files(directory, patron):
         for basename in files:
             # IMPORTANTE!!! : decode('windows-1252') porque las rutas estan en
             # utf8 en linux, pero python por defecto esta en ASCII -.-
-            if fnmatch.fnmatch(basename.decode('windows-1252'), patron):
-                filename = os.path.join(root, basename.decode('windows-1252'))
+            if fnmatch.fnmatch(basename.decode('windows-1252','ignore'), patron):
+                filename = os.path.join(root, basename.decode('windows-1252','ignore'))
+            #if fnmatch.fnmatch(basename, patron):
+                #filename = os.path.join(root, basename)
                 yield filename
+
+
 
 ###################### DIGESTO (.DOC*)  #######################
 
@@ -97,8 +103,8 @@ diff = list(set(archivos_enFS) - set(lista_archivosDB))
 print "---------------archivos de DIGESTO que faltan procesar  *.DOC* -----------------:"
 
 for nombre_archivo in diff:
-
-    print nombre_archivo
+    # cuidado al imprimir, con nohup tira error por bad encoding. Derecho sin nohup no tira error :O
+    #print nombre_archivo
     #arch = subprocess.check_output("php extraertxt_de_docs.php?"+nombre_archivo, shell=True);
     # subprocess.check_output(["... no funca, porque es python < 2.7 :(
 
@@ -121,6 +127,8 @@ countinDB = 0
 for t in getData(sql):  # ->cursor.fetchall
     lista_archivosDB.append(t[0])
     #print t[0]
+    #if "0220-2014" in t[0]:
+        #print "archivo problematico en DB: "+t[0]
     countinDB = countinDB + 1
 
 archivos_enFS = []
@@ -129,22 +137,33 @@ countinFS = 0
 for nombre_archivo in find_files('/var/www/intranet/repo/digesto', '*.pdf'):
     archivos_enFS.append(nombre_archivo)
     countinFS = countinFS + 1
+    #if fnmatch.fnmatch('"'+nombre_archivo+'"', '*0220-2014*'):
+        #print "archivo problematico en FS: "+nombre_archivo
 
 diff = []
+# POR SI HACIA LA COMPARACION DE LISTAS en LOWECASE. AL FINAL COLLATION DEL CAMPO
+# "archivo" FUE ALTERADO DE utf8_spanish a utf8_bin -> case sensitive
+#archivos_enFS = [x.lower() for x in archivos_enFS]
+#lista_archivosDB = [x.lower() for x in lista_archivosDB]
+
 diff = list(set(archivos_enFS) - set(lista_archivosDB))
 
 print "---------------archivos de DIGESTO que faltan procesar  *.PDF -----------------:"
 
 for nombre_archivo in diff:
     print '->'+nombre_archivo
-    os.system('convert -density 300 "'+nombre_archivo+'" -depth 8 -strip -background white -alpha off file.tiff')
-    os.system("tesseract file.tiff ocr -l spa")
-    ocr_txt = io.open("ocr.txt", "r", encoding="utf-8")
-    contenido = ocr_txt.read()
-    contenido = " ".join(contenido.split())
-    sql =  "INSERT IGNORE INTO ocr (tipo,archivo,contenido) VALUES ( '3' , %s , %s )"
-    insertar(sql, nombre_archivo, contenido)
-    os.system("rm file.tiff && rm ocr.txt")
+    if procesarPDF == 1:
+        os.system('cp "'+nombre_archivo+'" tmp.pdf')
+        os.system('convert -density 300 tmp.pdf -depth 8 -strip -background white -alpha off file.tiff')
+        #os.system('convert -density 300 "'+nombre_archivo+'" -depth 8 -strip -background white -alpha off file.tiff')
+        os.system("tesseract file.tiff ocr -l spa")
+        ocr_txt = io.open("ocr.txt", "r", encoding="utf-8")
+        contenido = ocr_txt.read()
+        contenido = " ".join(contenido.split())
+        sql =  "INSERT IGNORE INTO ocr (tipo,archivo,contenido) VALUES ( '3' , %s , %s )"
+        insertar(sql, nombre_archivo, contenido)
+        os.system("rm file.tiff && rm ocr.txt && rm tmp.pdf")
+        #raw_input("Press Enter to continue...")
 
 print "en FS:"+str(countinFS)
 print "en DB:"+str(countinDB)
@@ -176,7 +195,6 @@ diff = list(set(archivos_enFS) - set(lista_archivosDB))
 print "---------------archivos de DOC CONSEJO que faltan procesar *.DOC* -----------------:"
 
 for nombre_archivo in diff:
-
     print nombre_archivo
     contenidoDOC = Popen(['php', 'extraertxt_de_docs.php', nombre_archivo], stdout=PIPE)
     sql =  '''INSERT IGNORE INTO ocr (tipo,archivo,contenido) VALUES ( '4' , %s , %s )'''
@@ -213,14 +231,18 @@ print "---------------archivos de DOC CONSEJO que faltan procesar *.PDF --------
 
 for nombre_archivo in diff:
     print '->'+nombre_archivo
-    os.system('convert -density 300 "'+nombre_archivo+'" -depth 8 -strip -background white -alpha off file.tiff')
-    os.system("tesseract file.tiff ocr -l spa")
-    ocr_txt = io.open("ocr.txt", "r", encoding="utf-8")
-    contenido = ocr_txt.read()
-    contenido = " ".join(contenido.split())
-    sql =  "INSERT IGNORE INTO ocr (tipo,archivo,contenido) VALUES ( '4' , %s , %s )"
-    insertar(sql, nombre_archivo, contenido)
-    os.system("rm file.tiff && rm ocr.txt")
+    if procesarPDF == 1:
+        os.system('cp "'+nombre_archivo+'" tmp.pdf')
+        os.system('convert -density 300 tmp.pdf -depth 8 -strip -background white -alpha off file.tiff')
+        #os.system('convert -density 300 "'+nombre_archivo+'" -depth 8 -strip -background white -alpha off file.tiff')
+        os.system("tesseract file.tiff ocr -l spa")
+        ocr_txt = io.open("ocr.txt", "r", encoding="utf-8")
+        contenido = ocr_txt.read()
+        contenido = " ".join(contenido.split())
+        sql =  "INSERT IGNORE INTO ocr (tipo,archivo,contenido) VALUES ( '4' , %s , %s )"
+        insertar(sql, nombre_archivo, contenido)
+        os.system("rm file.tiff && rm ocr.txt && rm tmp.pdf")
+        #raw_input("Press Enter to continue...")
 
 
 print "en FS:"+str(countinFS)
