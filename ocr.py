@@ -20,7 +20,7 @@ from mysql.connector import errorcode
 #import subprocess
 from subprocess import PIPE,Popen
 
-procesarPDF = 0
+procesarPDF = 1
 
 def conectarMySQL():
     # Si jode insert sql grandote cambiar max_allowed_packet en my.cnf
@@ -89,7 +89,6 @@ for t in getData(sql):  # ->cursor.fetchall
     #print t[0]
     countinDB = countinDB + 1
 archivos_enFS = []
-#print "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
 
 countinFS = 0
 
@@ -104,8 +103,6 @@ print "---------------archivos de DIGESTO que faltan procesar  *.DOC* ----------
 
 for nombre_archivo in diff:
     # cuidado al imprimir, con nohup tira error por bad encoding. Derecho sin nohup no tira error :O
-    #print nombre_archivo
-    #arch = subprocess.check_output("php extraertxt_de_docs.php?"+nombre_archivo, shell=True);
     # subprocess.check_output(["... no funca, porque es python < 2.7 :(
 
     contenidoDOC = Popen(['php', 'extraertxt_de_docs.php', nombre_archivo], stdout=PIPE)
@@ -126,7 +123,7 @@ lista_archivosDB = []
 countinDB = 0
 for t in getData(sql):  # ->cursor.fetchall
     lista_archivosDB.append(t[0])
-    #print t[0]
+    # comparar un archivo específico
     #if "0220-2014" in t[0]:
         #print "archivo problematico en DB: "+t[0]
     countinDB = countinDB + 1
@@ -137,15 +134,16 @@ countinFS = 0
 for nombre_archivo in find_files('/var/www/intranet/repo/digesto', '*.pdf'):
     archivos_enFS.append(nombre_archivo)
     countinFS = countinFS + 1
+    # comparar un archivo específico
     #if fnmatch.fnmatch('"'+nombre_archivo+'"', '*0220-2014*'):
         #print "archivo problematico en FS: "+nombre_archivo
 
-diff = []
 # POR SI HACIA LA COMPARACION DE LISTAS en LOWECASE. AL FINAL COLLATION DEL CAMPO
 # "archivo" FUE ALTERADO DE utf8_spanish a utf8_bin -> case sensitive
 #archivos_enFS = [x.lower() for x in archivos_enFS]
 #lista_archivosDB = [x.lower() for x in lista_archivosDB]
-
+        
+diff = []
 diff = list(set(archivos_enFS) - set(lista_archivosDB))
 
 print "---------------archivos de DIGESTO que faltan procesar  *.PDF -----------------:"
