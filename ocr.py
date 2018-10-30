@@ -27,10 +27,10 @@ def conectarMySQL():
     # o ...
     # /opt/lampp/bin/mysql -uroot -p  --max_allowed_packet=1073741824 < insert.sql
     try:
-        cnx = mysql.connector.connect(user='navicat',
-                                      password='L4Cl4v3P0l3nt4',
+        cnx = mysql.connector.connect(user='<usuario>',
+                                      password='<password>',
                                       host='localhost',
-                                      database='intranet',
+                                      database='<db>',
                                       charset='utf8',
                                       use_unicode=False)
 
