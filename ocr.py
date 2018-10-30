@@ -20,17 +20,17 @@ from mysql.connector import errorcode
 #import subprocess
 from subprocess import PIPE,Popen
 
-procesarPDF = 1
+procesarPDF = 0
 
 def conectarMySQL():
     # Si jode insert sql grandote cambiar max_allowed_packet en my.cnf
     # o ...
     # /opt/lampp/bin/mysql -uroot -p  --max_allowed_packet=1073741824 < insert.sql
     try:
-        cnx = mysql.connector.connect(user='<usuario>',
-                                      password='<password>',
+        cnx = mysql.connector.connect(user='navicat',
+                                      password='L4Cl4v3P0l3nt4',
                                       host='localhost',
-                                      database='<db>',
+                                      database='intranet',
                                       charset='utf8',
                                       use_unicode=False)
 
@@ -162,7 +162,7 @@ for nombre_archivo in diff:
         contenido = " ".join(contenido.split())
         sql =  "INSERT IGNORE INTO ocr (tipo,archivo,contenido) VALUES ( '3' , %s , %s )"
         insertar(sql, nombre_archivo, contenido)
-        os.system("rm file.tiff && rm ocr.txt && rm tmp.pdf")
+        os.system("rm file.tiff && rm ocr.txt && rm tmp.pdf && rm /tmp/magick-*")
         #raw_input("Press Enter to continue...")
 
 print "en FS:"+str(countinFS)
@@ -241,7 +241,7 @@ for nombre_archivo in diff:
         contenido = " ".join(contenido.split())
         sql =  "INSERT IGNORE INTO ocr (tipo,archivo,contenido) VALUES ( '4' , %s , %s )"
         insertar(sql, nombre_archivo, contenido)
-        os.system("rm file.tiff && rm ocr.txt && rm tmp.pdf")
+        os.system("rm file.tiff && rm ocr.txt && rm tmp.pdf && rm /tmp/magick-*")
         #raw_input("Press Enter to continue...")
 
 
